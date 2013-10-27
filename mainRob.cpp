@@ -110,8 +110,9 @@ int main(int argc, char *argv[])
                          printf("%s found home at %d\n", rob_name, GetTime());
                      }
                      else {
-                        DetermineAction(1,&lPow,&rPow,&actionState);
-                        DriveMotors(lPow,rPow);
+                        Finish();
+                        //DetermineAction(1,&lPow,&rPow,&actionState);
+                        //DriveMotors(lPow,rPow);
                      }
                      break;
 	}

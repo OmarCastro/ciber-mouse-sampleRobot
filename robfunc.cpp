@@ -1,5 +1,5 @@
 #include "robfunc.h"
-float comppass = 0;
+float comppass = 0.0;
 bool waitingForSensor = false;
 /* Calculate the power of left and right motors */
 void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
@@ -40,6 +40,9 @@ void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
         Collision= GetBumperSensor();
     if(IsCompassReady()){
         Compass= GetCompassSensor();
+        if(comppass == 0.0){
+            comppass = Compass;
+        }
     }
 
 
@@ -52,15 +55,36 @@ void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
 
 
 
-    else if(center>4.0 || right>4.1 || left>4.1 || Collision) { /* Close Obstacle - Rotate */
+    else if(center>4.0 || right> 3.1 || left>3.1 || Collision) { /* Close Obstacle - Rotate */
         if(comppass == 0.0){
             waitingForSensor == true;
         }
 
 
-        if(center < 0.8){
-            *lPow=0.05;
-            *rPow=0.05;
+        if(center < 0.7){
+            if(*state == BYPASSIN_RIGTH){
+                if(left < 3.7 ){
+                    *lPow=0.04;
+                    *rPow=0.06;
+                } else if(left > 4.5 ){
+                    *lPow=0.06;
+                    *rPow=0.04;
+                } else {
+                    *lPow=0.05;
+                    *rPow=0.05;
+                }
+            } else {
+                if(right < 3.7 ){
+                    *lPow=0.06;
+                    *rPow=0.04;
+                } else if(right > 4.5 ){
+                    *lPow=0.04;
+                    *rPow=0.06;
+                } else {
+                    *lPow=0.05;
+                    *rPow=0.05;
+                }
+            }
         } else if(right < left) {
                *lPow=0.06;
                *rPow=-0.06;
@@ -82,15 +106,6 @@ void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
         }
     }
 
-    else if(right>1.5) { /* Obstacle Near - Avoid */
-        *lPow=0.00;
-        *rPow=0.05;
-    }
-    else if(left>1.5) {
-        *lPow=0.05;
-        *rPow=0.00;
-    }
-
     else if(beaconReady && beacon.beaconVisible){
         if(beacon.beaconDir>20.0){
             *lPow=0.0;
@@ -105,20 +120,21 @@ void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
            *rPow=0.15;
         }
     } else {
-        if(rotTime >= 5){
-            *state = RUNNING;
-            rotTime = 0;
+        if(*state != RUNNING){
+            float diff = Compass - comppass;
+            if(diff < 10 && diff > -10){
+                *state = RUNNING;
+            }
         }
+
         if(*state == BYPASSIN_LEFT){
             *lPow=0.07;
-            *rPow=0.00;
-            rotTime++;
+            *rPow=0.01;
 
         }
         else if(*state == BYPASSIN_RIGTH){
-            *lPow=0.00;
+            *lPow=0.01;
             *rPow=0.07;
-            rotTime++;
         }
         else { /* Full Speed Ahead */
            *lPow=0.1;
