@@ -1,11 +1,11 @@
 #include "robfunc.h"
-float comppass = 0.0;
 bool waitingForSensor = false;
 /* Calculate the power of left and right motors */
 void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
 {
     static int counter=0;
-    static int rotTime=0;
+    static float InitalOrientation = 0.0;
+
     bool   beaconReady;
     static struct beaconMeasure beacon; // beacon sensor
     static float  left; //value of frontal left sonar sensor
@@ -40,8 +40,11 @@ void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
         Collision= GetBumperSensor();
     if(IsCompassReady()){
         Compass= GetCompassSensor();
-        if(comppass == 0.0){
-            comppass = Compass;
+        if(InitalOrientation == 0.0){
+            /* its very rare for the initial orientation to be exactly 0.0
+             * an aproximated value of orientation is enough
+            */
+            InitalOrientation = Compass;
         }
     }
 
@@ -56,7 +59,7 @@ void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
 
 
     else if(center>4.0 || right> 3.1 || left>3.1 || Collision) { /* Close Obstacle - Rotate */
-        if(comppass == 0.0){
+        if(InitalOrientation == 0.0){
             waitingForSensor == true;
         }
 
@@ -121,7 +124,7 @@ void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
         }
     } else {
         if(*state != RUNNING){
-            float diff = Compass - comppass;
+            float diff = Compass - InitalOrientation; //difference between initial orientation and current
             if(diff < 10 && diff > -10){
                 *state = RUNNING;
             }
