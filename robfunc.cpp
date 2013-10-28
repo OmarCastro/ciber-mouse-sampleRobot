@@ -4,7 +4,7 @@ bool waitingForSensor = false;
 void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
 {
     static int counter=0;
-    static float InitalOrientation = 0.0;
+    static float CollisionOrientation = 0.0;
 
     bool   beaconReady;
     static struct beaconMeasure beacon; // beacon sensor
@@ -40,12 +40,6 @@ void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
         Collision= GetBumperSensor();
     if(IsCompassReady()){
         Compass= GetCompassSensor();
-        if(InitalOrientation == 0.0){
-            /* its very rare for the initial orientation to be exactly 0.0
-             * an aproximated value of orientation is enough
-            */
-            InitalOrientation = Compass;
-        }
     }
 
 
@@ -55,87 +49,76 @@ void DetermineAction(int beaconToFollow, float *lPow, float *rPow, int *state)
 
 
 
-
-
-
-    else if(center>4.0 || right> 3.1 || left>3.1 || Collision) { /* Close Obstacle - Rotate */
-        if(InitalOrientation == 0.0){
-            waitingForSensor == true;
-        }
-
-
-        if(center < 0.7){
-            if(*state == BYPASSIN_RIGTH){
-                if(left < 3.7 ){
-                    *lPow=0.04;
-                    *rPow=0.06;
-                } else if(left > 4.5 ){
-                    *lPow=0.06;
-                    *rPow=0.04;
-                } else {
-                    *lPow=0.05;
-                    *rPow=0.05;
-                }
-            } else {
-                if(right < 3.7 ){
-                    *lPow=0.06;
-                    *rPow=0.04;
-                } else if(right > 4.5 ){
-                    *lPow=0.04;
-                    *rPow=0.06;
-                } else {
-                    *lPow=0.05;
-                    *rPow=0.05;
-                }
+    if(beaconReady && beacon.beaconVisible && center < 3.0){
+            if(beacon.beaconDir > 20.0 && left < 4.0){
+                *lPow=0.0;
+                *rPow=0.1;
             }
-        } else if(right < left) {
-               *lPow=0.06;
+            else if(beacon.beaconDir < -20.0 && right < 4.0){
+                *lPow=0.1;
+                *rPow=0.0;
+            }
+            else { /* Full Speed Ahead */
+               *lPow=0.1;
+               *rPow=0.1;
+            }
+
+
+    } else if(center>3.0 || right> 4.0 || left>4.0 || Collision) { /* Close Obstacle - Rotate */
+        if(right < left) {
+              *lPow=0.06;
                *rPow=-0.06;
-               *state = BYPASSIN_RIGTH;
+            if(*state != BYPASSING_RIGTH){
+                CollisionOrientation = Compass;
+               *state = BYPASSING_RIGTH;
+            }
         }  else {
                *lPow=-0.06;
                *rPow=0.06;
-               *state = BYPASSIN_LEFT;
+            if(*state != BYPASSING_LEFT){
+                CollisionOrientation = Compass;
+               *state = BYPASSING_LEFT;
+            }
         }
-    }
-
-    else if(center > 1.0){
-        if(right > left){
-            *lPow=0.02;
-            *rPow=0.05;
+    } else if(center < 0.7 && (right> 3.5 || left>3.5)){ // bypassing wall
+        if(*state == BYPASSING_RIGTH){
+            if(left < 3.5 ){
+                *lPow=0.04;
+                *rPow=0.06;
+            } else if(left > 3.7 ){
+                *lPow=0.06;
+                *rPow=0.04;
+            } else {
+                *lPow=0.05;
+                *rPow=0.05;
+            }
         } else {
-            *lPow=0.05;
-            *rPow=0.02;
-        }
-    }
-
-    else if(beaconReady && beacon.beaconVisible){
-        if(beacon.beaconDir>20.0){
-            *lPow=0.0;
-            *rPow=0.1;
-        }
-        else if(beacon.beaconDir<-20.0){
-            *lPow=0.1;
-            *rPow=0.0;
-        }
-        else { /* Full Speed Ahead */
-           *lPow=0.15;
-           *rPow=0.15;
+            if(right < 3.5 ){
+                *lPow=0.06;
+                *rPow=0.04;
+            } else if(right > 3.7 ){
+                *lPow=0.04;
+                *rPow=0.06;
+            } else {
+                *lPow=0.05;
+                *rPow=0.05;
+            }
         }
     } else {
         if(*state != RUNNING){
-            float diff = Compass - InitalOrientation; //difference between initial orientation and current
-            if(diff < 10 && diff > -10){
+            //difference between orientation when approached an obstacle and current one
+            float diff = Compass - CollisionOrientation;
+            if(diff < 5 && diff > -5){
                 *state = RUNNING;
             }
         }
 
-        if(*state == BYPASSIN_LEFT){
+        if(*state == BYPASSING_LEFT){
             *lPow=0.07;
             *rPow=0.01;
 
         }
-        else if(*state == BYPASSIN_RIGTH){
+        else if(*state == BYPASSING_RIGTH){
             *lPow=0.01;
             *rPow=0.07;
         }
